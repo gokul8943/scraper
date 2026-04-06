@@ -1,11 +1,22 @@
-
-import dotenv from 'dotenv';
-import { connectDB } from './database/dbConnection.js'
-
+import dotenv from "dotenv";
 dotenv.config();
 
-const startServer = async () => {
-    await connectDB();
-}
+import connectDB from  "./database/dbConnection.js"
+import { scrapeFlipkartMobiles } from "./scrapers/filpkartScraper.js";
 
-startServer();
+const main = async () => {
+    await connectDB();
+
+    await scrapeFlipkartMobiles({
+        minPrice: parseInt(process.env.MIN_PRICE) || 30000,
+        maxPrice: parseInt(process.env.MAX_PRICE) || 50000,
+        maxPages: parseInt(process.env.MAX_PAGES) || 5,
+    });
+
+    process.exit(0);
+};
+
+main().catch((err) => {
+    console.error("Fatal error:", err);
+    process.exit(1);
+});
