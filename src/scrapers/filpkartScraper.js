@@ -27,7 +27,29 @@ const parseReviews = (str) => {
     return match ? parseInt(match[0]) : null;
 };
 
-const extractBrand = (name) => (name ? name.split(" ")[0] : "Unknown");
+const cleanName = (name) => {
+    if (!name) return null;
+    return name
+        .replace(/currently\s*unavailable/gi, "")
+        .replace(/add\s*to\s*compare/gi, "")
+        .replace(/out\s*of\s*stock/gi, "")
+        .replace(/sponsored/gi, "")
+        .trim();
+};
+
+const KNOWN_BRANDS = [
+    "samsung", "apple", "oneplus", "xiaomi", "redmi", "realme", "oppo", "vivo",
+    "motorola", "nokia", "poco", "iqoo", "nothing", "google", "lava", "tecno",
+    "infinix", "asus", "sony", "honor", "huawei", "boat"
+];
+
+const extractBrand = (name) => {
+    if (!name) return "Unknown";
+    const lower = name.toLowerCase();
+    const found = KNOWN_BRANDS.find(b => lower.startsWith(b) || lower.includes(` ${b} `));
+    if (found) return found.charAt(0).toUpperCase() + found.slice(1);
+    return name.split(" ")[0] || "Unknown";
+};
 
 const parseSpecs = (specText) => {
     const specs = {
@@ -40,11 +62,11 @@ const parseSpecs = (specText) => {
 
     const get = (regex) => { const m = specText.match(regex); return m ? m[0] : null; };
 
-    specs.ram        = get(/\d+\s*GB\s*RAM/i);
-    specs.storage    = get(/\d+\s*(GB|TB)\s*(ROM|Storage|Internal)?/i);
-    specs.battery    = get(/\d{3,5}\s*mAh/i);
-    specs.display    = get(/\d+\.?\d*\s*(inch|")/i);
-    specs.refreshRate= get(/\d+\s*Hz/i);
+    specs.ram = get(/\d+\s*GB\s*RAM/i);
+    specs.storage = get(/\d+\s*(GB|TB)\s*(ROM|Storage|Internal)?/i);
+    specs.battery = get(/\d{3,5}\s*mAh/i);
+    specs.display = get(/\d+\.?\d*\s*(inch|")/i);
+    specs.refreshRate = get(/\d+\s*Hz/i);
 
     const rear = get(/\d+\s*MP(?:\s*\+\s*\d+\s*MP)*\s*(Rear|Triple|Dual|Quad|Main|Primary)?/i);
     if (rear) specs.rearCamera = [rear];
@@ -147,7 +169,7 @@ const extractProductsFromPage = () => {
                 productUrl,
                 description,
             });
-        } catch (_) {}
+        } catch (_) { }
     });
 
     return items;
@@ -199,7 +221,7 @@ export const scrapeFlipkartMobiles = async ({
         await page.click("button._2KpZ6l._2doB4z");
         console.log("   ✅ Dismissed login popup");
         await new Promise(r => setTimeout(r, 800));
-    } catch (_) {}
+    } catch (_) { }
 
     const results = [];
     let savedCount = 0;
@@ -245,12 +267,6 @@ export const scrapeFlipkartMobiles = async ({
             const products = await page.evaluate(extractProductsFromPage);
             console.log(`   📦 Extracted: ${products.length} products`);
 
-            // Save screenshot for verification
-            await page.screenshot({
-                path: `screenshot_page${pageNum}.png`,
-                fullPage: false
-            });
-
             for (const raw of products) {
                 const price = parsePrice(raw.priceText);
                 if (!price || price < minPrice || price > maxPrice) {
@@ -258,10 +274,13 @@ export const scrapeFlipkartMobiles = async ({
                     continue;
                 }
 
+
                 const specs = parseSpecs(raw.specText);
+                const cleanedName = cleanName(raw.name);  // 👈 add this
+
                 const productData = {
-                    name: raw.name,
-                    brand: extractBrand(raw.name),
+                    name: cleanedName,                    // 👈 use cleaned name
+                    brand: extractBrand(cleanedName),
                     description: raw.description,
                     price,
                     rating: parseRating(raw.ratingText),

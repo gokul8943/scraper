@@ -10,7 +10,7 @@ const main = async () => {
     await scrapeFlipkartMobiles({
         minPrice: parseInt(process.env.MIN_PRICE) || 30000,
         maxPrice: parseInt(process.env.MAX_PRICE) || 50000,
-        maxPages: parseInt(process.env.MAX_PAGES) || 5,
+        maxPages: parseInt(process.env.MAX_PAGES) || 10,
     });
 
     process.exit(0);
